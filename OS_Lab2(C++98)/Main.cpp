@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <stdexcept>
+#include <limits.h>
 
 struct ThreadData
 {
@@ -26,6 +27,7 @@ DWORD WINAPI MinMaxThread(LPVOID lpParam)
             {
                 minElement = array[i];
             }
+            Sleep(7);
             if (array[i] > maxElement)
             {
                 maxElement = array[i];
@@ -132,14 +134,16 @@ int main()
         replaceMinMaxWithAverage(array, minElement, maxElement, averageValue);
 
         std::cout << "Modified array: ";
-        for (int num : array)
+        for (size_t i = 0; i < array.size(); ++i)
         {
-            std::cout << num << " ";
+            std::cout << array[i] << " ";
         }
         std::cout << std::endl;
 
         CloseHandle(hMinMax);
         CloseHandle(hAverage);
+
+        std::cin >> n;
 
     }
     catch (const std::exception& e)
