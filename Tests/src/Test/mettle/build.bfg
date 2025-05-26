@@ -1,0 +1,105 @@
+# -*- mode: python; mode: bfg9000 -*-
+
+bfg9000_required_version('>=0.7.0')
+
+mettle_version = '0.2-dev'
+project('mettle', mettle_version, intermediate_dirs=False)
+
+global_options([opts.std(argv.std)], lang='c++')
+
+pthread = [package('pthread')] if env.target_platform.family == 'posix' else []
+bencode = package('bencodehpp')
+boost_hdrs = package('boost', version='>=1.55')
+iostreams = package('boost', 'iostreams', version='>=1.55')
+prog_opts = package('boost', 'program_options', version='>=1.55')
+
+compile_opts = [opts.define('METTLE_VERSION', '"{}"'.format(mettle_version))]
+if argv.safe_exit:
+    compile_opts.append(opts.define('METTLE_SAFE_EXIT'))
+
+includes = header_directory('include', include='**/*.hpp')
+
+libmettle = shared_library(
+    'mettle',
+    files=find_files('src/libmettle/**/*.cpp', extra='*.hpp',
+                     filter=filter_by_platform),
+    includes=includes,
+    compile_options=compile_opts,
+    packages=pthread + [bencode, iostreams, prog_opts],
+    version='0.2', soversion='1',
+)
+
+mettle_objs = object_files(
+    files=find_files('src/mettle/**/*.cpp', extra='*.hpp',
+                     filter=filter_by_platform),
+    includes=includes,
+    options=compile_opts,
+    packages=[bencode, iostreams, prog_opts],
+)
+mettle = executable(
+    'mettle',
+    files=mettle_objs,
+    libs=[libmettle],
+    packages=[bencode, iostreams, prog_opts],
+)
+
+pkg_config(auto_fill=True)
+install(mettle, libmettle, includes)
+install(man_page('man/mettle.1'))
+
+extra_files = {
+    'test/driver/test_test_command.cpp': ['src/mettle/test_command.cpp'],
+    'test/driver/test_run_test_files.cpp': [
+        'src/mettle/run_test_files.cpp', 'src/mettle/test_command.cpp'
+    ] + find_paths('src/mettle/*/run_test_file.cpp',
+                   filter=filter_by_platform),
+}
+extra_pkgs = {
+    'test/driver/test_cmd_line.cpp': [prog_opts],
+    'test/driver/test_test_command.cpp': [prog_opts],
+    'test/driver/test_run_test_files.cpp': [iostreams, prog_opts],
+    'test/posix/test_subprocess.cpp': pthread,
+}
+
+driver = test_driver(
+    [mettle, '--output=verbose'],
+    environment={'TEST_DATA': 'test_data'},
+)
+for src in find_paths('test/**/*.cpp', extra='*.hpp',
+                      filter=filter_by_platform):
+    test(executable(
+        src.stripext().suffix,
+        files=[src] + [mettle_objs[i] for i in extra_files.get(src.suffix, [])],
+        includes=includes,
+        libs=libmettle,
+        packages=[bencode, boost_hdrs] + extra_pkgs.get(src.suffix, []),
+    ), driver=driver)
+
+test_data = alias('test-data', [
+    executable(src.stripext().suffix, files=src, includes=includes,
+               libs=libmettle, packages=boost_hdrs)
+    for src in find_paths('test_data/**/*.cpp', extra='*.hpp')
+])
+test_deps(test_data)
+
+header_only_examples = ['examples/test_02_header_only.cpp']
+alias('examples', [
+    executable(src.stripext().suffix, files=src, includes=includes,
+               libs=None if src.suffix in header_only_examples else libmettle,
+               packages=boost_hdrs)
+    for src in find_paths('examples/**/*.cpp', extra='*.hpp')
+])
+
+doc_deploy = source_file('scripts/doc_deploy.py')
+mkdocs = generic_file('mkdocs.yml')
+command('doc-serve', cmd=['mike', 'serve', '--config-file', mkdocs,
+                          '--dev-addr=0.0.0.0:8000'])
+command('doc-serve-working', cmd=['mkdocs', 'serve', '--config-file', mkdocs,
+                                  '--dev-addr=0.0.0.0:8000'])
+command('doc-deploy', cmd=[doc_deploy, '--config-file', mkdocs,
+                           mettle_version])
+
+# Extra files to be packaged in the source dist.
+find_files('src/*.[ch]pp')
+extra_dist(files=['README.md', 'CHANGES.md', 'LICENSE'],
+           dirs=['doc', 'scripts'])

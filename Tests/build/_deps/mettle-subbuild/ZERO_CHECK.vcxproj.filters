@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Ivan\Documents\GitHub\OS_Lab2\Tests\build\_deps\mettle-subbuild\CMakeFiles\29e7ab34bbfb3c372a83287c7160fa15\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{B4DC6CEC-E811-3A40-9099-877B779AE8BD}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
